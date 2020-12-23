@@ -19,6 +19,7 @@ library(scales)
 library(ggthemes)
 library(tidylo)
 library(tidytext)
+library(glue)
 ```
 
 Loading datasets.
@@ -49,8 +50,8 @@ ninja_warrior %>%
 
 ninja_warrior %>%
   count(location, season) %>%
-  mutate(location = fct_reorder(location, n)) %>%
   filter(fct_lump(location, 10, w = n, ties.method = "first") != "Other") %>%
+  mutate(location = fct_reorder(location, n, sum)) %>%
   ggplot(aes(n, location, fill = season)) +
   geom_col() +
   theme_fivethirtyeight() +
@@ -252,6 +253,109 @@ ninja_warrior %>%
   labs(title = "What does a typical Finals course look like?") +
   facet_wrap(~ obstacle_name) +
   theme(legend.position = "none")
+```
+
+```{r}
+
+  ninja_warrior %>%
+  filter(round_stage == "Finals") %>%
+  add_count(obstacle_order, round_stage, name = "round_stage_total") %>%
+  filter(round_stage_total >= 10) %>%
+  add_count(obstacle_name, name = "obstacle_total") %>%
+  mutate(obstacle_name = glue("{obstacle_name} ({obstacle_total})")) %>%
+  mutate(obstacle_name = fct_lump(obstacle_name, 10)) %>%
+  mutate(obstacle_name = fct_reorder(obstacle_name, obstacle_order)) %>%
+  ggplot(aes(obstacle_order, obstacle_name)) +
+  geom_boxplot() +
+  scale_x_continuous(breaks = 1:10) +
+  theme_fivethirtyeight() +
+  theme(text = element_text(family = "Times New Roman"), 
+        axis.title = element_text()) +
+  labs(x = "Position",
+       y = "", 
+       title = "The position of the most common obstacles in Ninja Warrior",
+       subtitle = "Final round")
+
+```
+
+
+
+```{r}
+ninja_warrior %>%
+  filter(round_stage == "Qualifying",
+         obstacle_order <= 6) %>%
+  mutate(lumped = fct_lump(obstacle_name, 6),
+         lumped = fct_reorder(obstacle_name, obstacle_order + season * 0.01)) %>%
+  unite(season_location, season, location, sep = " - ", remove = FALSE) %>%
+  mutate(season_location = fct_rev(fct_reorder(season_location, season))) %>%
+  ggplot(aes(obstacle_order, season_location, fill = lumped)) +
+  geom_tile() +
+  geom_text(aes(label = obstacle_name), size = 3) +
+  scale_x_continuous(breaks = 1:6) +
+  labs(x = "Obstacle order",
+       y = "Season and location",
+       title = "How have the obstacles varied at each positon over time?",
+       subtitle = "Qualifying round") +
+  theme_fivethirtyeight() +
+  theme(text = element_text(family = "Times New Roman"),
+        axis.title = element_text(),
+        legend.position = "none")
+
+ninja_warrior %>%
+  filter(round_stage == "Finals",
+         obstacle_order <= 10) %>%
+  mutate(obstacle_name = str_trunc(obstacle_name, 20),
+         lumped = fct_lump(obstacle_name, 6),
+         lumped = fct_reorder(obstacle_name, obstacle_order + season * 0.01)) %>%
+  unite(season_location, season, location, sep = " - ", remove = FALSE) %>%
+  mutate(season_location = fct_rev(fct_reorder(season_location, season))) %>%
+  ggplot(aes(obstacle_order, season_location, fill = lumped)) +
+  geom_tile() +
+  geom_text(aes(label = obstacle_name), size = 3) +
+  scale_x_continuous(breaks = 1:10) +
+  labs(x = "Obstacle order",
+       y = "Season and location",
+       title = "How have the obstacles varied at each positon over time?",
+       subtitle = "Finals round") +
+  theme_fivethirtyeight() +
+  theme(text = element_text(family = "Times New Roman"),
+        axis.title = element_text(),
+        legend.position = "none")
+```
+
+
+```{r}
+ninja_warrior %>%
+  filter(round_stage == "Qualifying") %>%
+  mutate(obstacle_name = fct_lump(obstacle_name, 15)) %>%
+  mutate(obstacle_name = fct_reorder(obstacle_name, season)) %>%
+  ggplot(aes(season, obstacle_name)) +
+  geom_boxplot() +
+  labs(x = "Season",
+       y = "Obstacle",
+       title = "How common were various obstacle in each season?") +
+  theme_fivethirtyeight() +
+  scale_x_continuous(breaks = 1:10) +
+  theme(text = element_text(family = "Times New Roman"),
+        axis.title = element_text())
+
+ninja_warrior %>%
+  filter(round_stage == "Qualifying") %>%
+  mutate(obstacle_name = fct_lump(obstacle_name, 8)) %>%
+  mutate(obstacle_name = fct_rev(fct_reorder(obstacle_name, season))) %>%
+  count(obstacle_name, season) %>%
+  group_by(season) %>%
+  mutate(pct = n / sum(n)) %>%
+  ggplot(aes(season, pct, fill = obstacle_name)) +
+  geom_col() +
+  labs(x = "Season",
+       y = "",
+       title = "How common were various obstacle in each season?") +
+  theme_fivethirtyeight() +
+  scale_x_continuous(breaks = 1:10) +
+  theme(text = element_text(family = "Times New Roman"),
+        axis.title = element_text()) +
+  scale_y_continuous(labels = percent)
 ```
 ```
 
