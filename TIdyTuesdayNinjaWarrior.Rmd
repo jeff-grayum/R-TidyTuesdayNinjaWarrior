@@ -152,8 +152,106 @@ ninja_warrior %>%
   count(season, location)
 ```
 
-What are the most common combinations of obstacles?
-```{r}
 
+```{r}
+ninja_warrior %>%
+  filter(round_stage ==  "Qualifying") %>%
+  mutate(obstacle_name = fct_lump(obstacle_name, 10)) %>%
+  mutate(obstacle_name = fct_reorder(obstacle_name, obstacle_order)) %>%
+  count(obstacle_name, obstacle_order) %>%
+  ggplot(aes(obstacle_order, n, fill = obstacle_name)) +
+  geom_col() +
+  scale_x_continuous(breaks = 1:7) +
+  theme_fivethirtyeight() +
+  theme(text = element_text(family = "Times New Roman"), 
+        axis.title = element_text()) +
+  labs(x = "Obstacle order",
+       y = "Number of courses", 
+       fill = "Obstacle",
+       title = "The most common obstacles in each position of the qualifying round of Ninja Warrior")
+
+
+#The same graph, but showing percent of rounds rather than n(rounds)
+ninja_warrior %>%
+  filter(round_stage ==  "Qualifying") %>%
+  add_count(obstacle_order, round_stage, name = "round_stage_total") %>%
+  filter(round_stage_total >= 10) %>%
+  mutate(obstacle_name = fct_lump(obstacle_name, 10)) %>%
+  mutate(obstacle_name = fct_reorder(obstacle_name, obstacle_order)) %>%
+  count(round_stage_total, obstacle_name, obstacle_order) %>%
+  ggplot(aes(obstacle_order, n / round_stage_total, fill = obstacle_name)) +
+  geom_col() +
+  scale_y_continuous(labels = percent) +
+  scale_x_continuous(breaks = 1:6) +
+  theme_fivethirtyeight() +
+  theme(text = element_text(family = "Times New Roman"), 
+        axis.title = element_text()) +
+  labs(x = "Position",
+       y = "Percent of courses", 
+       fill = "Obstacle",
+       title = "The most common obstacles in each position of the qualifying round of Ninja Warrior")
+
+ninja_warrior %>%
+  filter(round_stage ==  "Finals") %>%
+  mutate(obstacle_name = fct_lump(obstacle_name, 10)) %>%
+  mutate(obstacle_name = fct_reorder(obstacle_name, obstacle_order)) %>%
+  count(obstacle_name, obstacle_order) %>%
+  ggplot(aes(obstacle_order, n, fill = obstacle_name)) +
+  geom_col() +
+  scale_x_continuous(breaks = 1:10) +
+  theme_fivethirtyeight() +
+  theme(text = element_text(family = "Times New Roman"), 
+        axis.title = element_text()) +
+  labs(x = "Obstacle order",
+       y = "Number of courses", 
+       fill = "Obstacle",
+       title = "The most common obstacles in each position of the final round of Ninja Warrior")
+
+#Let's turn this into a function!
+visualize_steps <- function(tbl) {
+  tbl %>%
+    add_count(obstacle_order, round_stage, name = "round_stage_total") %>%
+  filter(round_stage_total >= 10) %>%
+  mutate(obstacle_name = fct_lump(obstacle_name, 10)) %>%
+  mutate(obstacle_name = fct_reorder(obstacle_name, obstacle_order)) %>%
+  count(round_stage_total, obstacle_name, obstacle_order) %>%
+  ggplot(aes(obstacle_order, n / round_stage_total, fill = obstacle_name)) +
+  geom_col() +
+  scale_y_continuous(labels = percent) +
+  scale_x_continuous(breaks = 1:10) +
+  theme_fivethirtyeight() +
+  theme(text = element_text(family = "Times New Roman"), 
+        axis.title = element_text()) +
+  labs(x = "Position",
+       y = "Percent of courses", 
+       fill = "Obstacle")
+}
+
+#Now let's use the function we wrote to make the same graph we made earlier!
+ninja_warrior %>%
+  filter(round_stage == "Qualifying") %>%
+  visualize_steps() +
+  labs(title = "What does a typical Qualifying course look like?")
+
+#And now for the Final round
+
+ninja_warrior %>%
+  filter(round_stage == "Finals") %>%
+  visualize_steps() +
+  labs(title = "What does a typical Finals course look like?") 
+
+ninja_warrior %>%
+  filter(round_stage == "National Finals - Stage 1") %>%
+  visualize_steps() +
+  labs(title = "What does a typical Nations Finals - Stage 1 course look like?")
+
+#Let's go at it w a facet_wrap, eh?
+ninja_warrior %>%
+  filter(round_stage == "Finals") %>%
+  visualize_steps() +
+  labs(title = "What does a typical Finals course look like?") +
+  facet_wrap(~ obstacle_name) +
+  theme(legend.position = "none")
+```
 ```
 
