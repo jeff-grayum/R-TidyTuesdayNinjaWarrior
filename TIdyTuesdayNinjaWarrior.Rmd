@@ -18,6 +18,7 @@ library(tidytuesdayR)
 library(scales)
 library(ggthemes)
 library(tidylo)
+library(tidytext)
 ```
 
 Loading datasets.
@@ -102,11 +103,57 @@ ninja_warrior %>%
   mutate(obstacle_name = fct_reorder(obstacle_name, log_odds_weighted)) %>%
   ggplot(aes(log_odds_weighted, obstacle_name)) +
   geom_col() +
-  labs(x = "More/less likely to in finals",
+  labs(x = "More/less likely to appear in finals",
        y = "",
        title = "Liklihood of various Ninja Warrior obstacles appearing in finals") +
   theme_fivethirtyeight() +
   theme(text = element_text(family = "Times New Roman"),
         axis.title = element_text())
+```
+
+```{r}
+
+total_rounds <- ninja_warrior %>%
+  filter(round_stage == "Qualifying") %>%
+  distinct(season, location) %>%
+  nrow()
+  
+  
+ninja_warrior %>%
+  filter(round_stage %in% c("Qualifying", "Finals")) %>%
+  unite(season_location, season, location, remove = FALSE) %>%
+  group_by(round_stage) %>%
+  mutate(total_rounds = n_distinct(season_location)) %>%
+  group_by(round_stage, obstacle_name) %>%
+  summarize(avg_position = mean(obstacle_order),
+            n_rounds = n(),
+            pct_rounds = n_rounds / first(total_rounds)) %>%
+  arrange(desc(n_rounds)) %>%
+  top_n(10, n_rounds) %>%
+  ungroup() %>%
+  mutate(obstacle_name = reorder_within(obstacle_name, avg_position, round_stage)) %>%
+  ggplot(aes(avg_position, obstacle_name, size = pct_rounds)) +
+  geom_point() +
+  facet_wrap(~ round_stage, nrow = 2, scales = "free_y") +
+  scale_y_reordered() +
+  scale_x_continuous(breaks = 1:10) +
+  scale_size_continuous(labels = percent) +
+  labs(x = "Average position",
+       y = "Obstacle name",
+       title = "The average position of the most common obstacles in Ninja Warrior",
+       subtitle = "Showing the ten most common obstacles in the qualifying and final rounds",
+       size = "% of courses") +
+  theme_fivethirtyeight() +
+  theme(text = element_text(family = "Times New Roman"),
+        axis.title = element_text())
+
+ninja_warrior %>%
+  filter(round_stage == "Qualifying") %>%
+  count(season, location)
+```
+
+What are the most common combinations of obstacles?
+```{r}
+
 ```
 
